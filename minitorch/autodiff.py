@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from typing import Any, Iterable, List, Tuple
 
+from collections import defaultdict
+
 from typing_extensions import Protocol
 
 # ## Task 1.1
@@ -22,7 +24,15 @@ def central_difference(f: Any, *vals: Any, arg: int = 0, epsilon: float = 1e-6) 
     Returns:
         An approximation of $f'_i(x_0, \ldots, x_{n-1})$
     """
-    raise NotImplementedError("Need to include this file from past assignment.")
+    vals_pos = list(vals)
+    vals_neg = list(vals)
+
+    vals_pos[arg] += epsilon
+    vals_neg[arg] -= epsilon
+
+    derivative = (f(*vals_pos) - f(*vals_neg)) / (2 * epsilon)
+
+    return derivative
 
 
 variable_count = 1
@@ -60,7 +70,22 @@ def topological_sort(variable: Variable) -> Iterable[Variable]:
     Returns:
         Non-constant Variables in topological order starting from the right.
     """
-    raise NotImplementedError("Need to include this file from past assignment.")
+    visited = set()
+    result = []
+
+    def recurse(current_node: Variable) -> None:
+        if current_node.unique_id in visited or current_node.is_constant():
+            return
+        
+        visited.add(current_node.unique_id)
+
+        for neig in current_node.parents:
+            recurse(neig)
+
+        result.append(current_node)
+
+    recurse(variable)
+    return result[::-1]
 
 
 def backpropagate(variable: Variable, deriv: Any) -> None:
@@ -74,7 +99,21 @@ def backpropagate(variable: Variable, deriv: Any) -> None:
 
     No return. Should write to its results to the derivative values of each leaf through `accumulate_derivative`.
     """
-    raise NotImplementedError("Need to include this file from past assignment.")
+    nodes_in_order = topological_sort(variable)
+    derivatives_map = defaultdict(float)
+    derivatives_map[variable.unique_id] = deriv
+
+    for current_node in nodes_in_order:
+        node_derivative = derivatives_map[current_node.unique_id]
+
+        if current_node.is_leaf():
+            current_node.accumulate_derivative(node_derivative)
+            continue
+
+        chain_results = current_node.chain_rule(node_derivative)
+        for parent_node, parent_derivative in chain_results:
+            if not parent_node.is_constant():
+                derivatives_map[parent_node.unique_id] += parent_derivative
 
 
 @dataclass
